@@ -41,9 +41,11 @@ class ReasoningDataset(Dataset):
         user = (f"{r['request']}\n\nRetrieved context:\n{ctx}" if ctx else r["request"])
         answer = r["answer"]
 
-        prompt_ids = self.tok.apply_chat_template(
+        prompt_text = self.tok.apply_chat_template(
             [{"role": "user", "content": user}],
-            add_generation_prompt=True, return_tensors="pt")[0]
+            add_generation_prompt=True, tokenize=False)
+        prompt_ids = self.tok(prompt_text, add_special_tokens=False,
+                              return_tensors="pt")["input_ids"][0]
         answer_ids = self.tok(answer, add_special_tokens=False,
                               return_tensors="pt")["input_ids"][0]
 

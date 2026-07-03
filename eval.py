@@ -30,11 +30,12 @@ def main():
     for r in rows[:5]:
         ctx = r.get("context", "")
         user = f"{r['request']}\n\nRetrieved context:\n{ctx}" if ctx else r["request"]
-        ids = tok.apply_chat_template([{"role": "user", "content": user}],
-                                      add_generation_prompt=True, return_tensors="pt").to(model.device)
+        txt = tok.apply_chat_template([{"role": "user", "content": user}],
+                                      add_generation_prompt=True, tokenize=False)
+        ids = tok(txt, return_tensors="pt").to(model.device)
         with torch.no_grad():
-            out = model.generate(ids, max_new_tokens=256, do_sample=False)
-        ans = tok.decode(out[0][ids.shape[1]:], skip_special_tokens=True).strip()
+            out = model.generate(**ids, max_new_tokens=256, do_sample=False)
+        ans = tok.decode(out[0][ids["input_ids"].shape[1]:], skip_special_tokens=True).strip()
         print(f"REQUEST : {r['request']}")
         print(f"STUDENT : {ans}")
         print(f"REFERENCE: {r['answer'][:200]}...")
@@ -45,8 +46,9 @@ def main():
     for r in rows:
         ctx = r.get("context", "")
         user = f"{r['request']}\n\nRetrieved context:\n{ctx}" if ctx else r["request"]
-        p = tok.apply_chat_template([{"role": "user", "content": user}],
-                                    add_generation_prompt=True, return_tensors="pt")[0]
+        ptxt = tok.apply_chat_template([{"role": "user", "content": user}],
+                                       add_generation_prompt=True, tokenize=False)
+        p = tok(ptxt, add_special_tokens=False, return_tensors="pt")["input_ids"][0]
         a = tok(r["answer"], add_special_tokens=False, return_tensors="pt")["input_ids"][0]
         ids = torch.cat([p, a])[:config.MAX_SEQ_LEN].unsqueeze(0).to(model.device)
         labels = ids.clone(); labels[0, :len(p)] = -100
