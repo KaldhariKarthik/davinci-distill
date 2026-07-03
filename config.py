@@ -23,7 +23,7 @@ USE_8BIT_ADAM      = True     # NON-NEGOTIABLE co-resident. Regular Adam OOMs.
 # Total loss = CE*w_ce + KL*w_kl + hidden_state*w_hidden
 W_CE     = 1.0    # cross-entropy on teacher's generated answer tokens
 W_KL     = 1.0    # soft-logit (KL) matching — the core distillation signal
-W_HIDDEN = 0.5    # hidden-state matching (needs the projection layer)
+W_HIDDEN = 0.02   # hidden-state matching (needs the projection layer)
 KL_TEMPERATURE = 2.0          # softens distributions for richer signal
 
 # which student/teacher layers to align for hidden-state matching.
@@ -31,7 +31,7 @@ KL_TEMPERATURE = 2.0          # softens distributions for richer signal
 HIDDEN_MATCH_LAYERS = "even"  # 'even' = spread matches across depth
 
 # ---- training ----------------------------------------------------------------
-LEARNING_RATE = 1e-5
+LEARNING_RATE = 2e-5
 NUM_EPOCHS    = 2
 WARMUP_STEPS  = 20
 SAVE_EVERY    = 100           # checkpoint frequency (steps)
