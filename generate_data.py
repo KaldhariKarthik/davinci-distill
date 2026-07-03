@@ -15,7 +15,7 @@ That double-load is expected — generation is one-time, training reuses the sav
 """
 import json, random, itertools
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import Qwen2_5_VLForConditionalGeneration, AutoProcessor, AutoTokenizer
 import config
 from seeds import SEEDS, SLOT_FILLERS
 
@@ -56,8 +56,8 @@ Respond with ONLY the JSON object, no preamble."""
 def main():
     print("[gen] loading teacher (32B) — this takes a few minutes...")
     tok = AutoTokenizer.from_pretrained(config.TEACHER_MODEL, trust_remote_code=True)
-    model = AutoModelForCausalLM.from_pretrained(
-        config.TEACHER_MODEL, torch_dtype=torch.bfloat16,
+    model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+        config.TEACHER_MODEL, dtype=torch.bfloat16,
         device_map="auto", trust_remote_code=True)
     model.eval()
 

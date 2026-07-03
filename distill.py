@@ -18,7 +18,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
-from transformers import AutoModelForCausalLM, AutoTokenizer, get_cosine_schedule_with_warmup
+from transformers import Qwen2_5_VLForConditionalGeneration, AutoTokenizer, get_cosine_schedule_with_warmup
 import bitsandbytes as bnb
 import config
 
@@ -82,25 +82,31 @@ def main():
     pad_id = tok.pad_token_id or tok.eos_token_id
 
     print("[distill] loading teacher (32B, frozen)...")
-    teacher = AutoModelForCausalLM.from_pretrained(
-        config.TEACHER_MODEL, torch_dtype=torch.bfloat16,
+    teacher = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+        config.TEACHER_MODEL, dtype=torch.bfloat16,
         device_map={"": 0}, trust_remote_code=True)
     teacher.eval()
     for p in teacher.parameters(): p.requires_grad_(False)
 
     print("[distill] loading student (3B, trainable)...")
-    student = AutoModelForCausalLM.from_pretrained(
-        config.STUDENT_MODEL, torch_dtype=torch.bfloat16,
+    student = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+        config.STUDENT_MODEL, dtype=torch.bfloat16,
         device_map={"": 0}, trust_remote_code=True)
     if config.GRADIENT_CHECKPOINTING:
         student.gradient_checkpointing_enable()
     student.train()
 
-    # width bridge for hidden-state matching
-    s_hidden = student.config.hidden_size
-    t_hidden = teacher.config.hidden_size
-    pairs = matched_layer_pairs(student.config.num_hidden_layers,
-                                teacher.config.num_hidden_layers)
+    # width bridge for hidden-state matching.
+    # VL configs sometimes nest text dims under .text_config — handle both.
+    def cfg_get(cfg, attr):
+        if hasattr(cfg, attr):
+            return getattr(cfg, attr)
+        return getattr(cfg.text_config, attr)
+
+    s_hidden = cfg_get(student.config, "hidden_size")
+    t_hidden = cfg_get(teacher.config, "hidden_size")
+    pairs = matched_layer_pairs(cfg_get(student.config, "num_hidden_layers"),
+                                cfg_get(teacher.config, "num_hidden_layers"))
     projections = nn.ModuleList([
         nn.Linear(s_hidden, t_hidden, bias=False).to(dev).to(torch.bfloat16)
         for _ in pairs])

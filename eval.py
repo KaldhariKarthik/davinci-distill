@@ -11,7 +11,7 @@ run it as a separate pass to keep this script light. Stub marked below.
 """
 import json, sys
 import torch, torch.nn.functional as F
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import Qwen2_5_VLForConditionalGeneration, AutoTokenizer
 import config
 
 MODEL = sys.argv[1] if len(sys.argv) > 1 else config.STUDENT_OUT
@@ -19,8 +19,8 @@ MODEL = sys.argv[1] if len(sys.argv) > 1 else config.STUDENT_OUT
 
 def main():
     tok = AutoTokenizer.from_pretrained(MODEL, trust_remote_code=True)
-    model = AutoModelForCausalLM.from_pretrained(
-        MODEL, torch_dtype=torch.bfloat16, device_map={"": 0}, trust_remote_code=True)
+    model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+        MODEL, dtype=torch.bfloat16, device_map={"": 0}, trust_remote_code=True)
     model.eval()
 
     rows = [json.loads(l) for l in open(config.EVAL_DATA_PATH)]
