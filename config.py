@@ -23,7 +23,7 @@ USE_8BIT_ADAM      = True     # NON-NEGOTIABLE co-resident. Regular Adam OOMs.
 # Total loss = CE*w_ce + KL*w_kl + hidden_state*w_hidden
 W_CE     = 1.0    # cross-entropy on teacher's generated answer tokens
 W_KL     = 1.0    # soft-logit (KL) matching — the core distillation signal
-W_HIDDEN = 0.02   # hidden-state matching (needs the projection layer)
+W_HIDDEN = 0.5    # hidden-state matching (needs the projection layer)
 KL_TEMPERATURE = 2.0          # softens distributions for richer signal
 
 # which student/teacher layers to align for hidden-state matching.
@@ -31,15 +31,15 @@ KL_TEMPERATURE = 2.0          # softens distributions for richer signal
 HIDDEN_MATCH_LAYERS = "even"  # 'even' = spread matches across depth
 
 # ---- training ----------------------------------------------------------------
-LEARNING_RATE = 2e-5
-NUM_EPOCHS    = 2
+LEARNING_RATE = 1e-5
+NUM_EPOCHS    = 6
 WARMUP_STEPS  = 20
 SAVE_EVERY    = 100           # checkpoint frequency (steps)
 
 # ---- data --------------------------------------------------------------------
 GENERATED_DATA_PATH = "data/teacher_data.jsonl"   # written by generate_data.py
 EVAL_DATA_PATH      = "data/eval.jsonl"           # held-out, for scoring
-VARIATIONS_PER_SEED = 30    # how many variations to expand each seed into
+VARIATIONS_PER_SEED = 60      # how many variations to expand each seed into
 
 # ---- paths -------------------------------------------------------------------
 STUDENT_OUT   = "outputs/student_distilled"

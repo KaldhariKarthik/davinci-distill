@@ -128,6 +128,28 @@ def main():
     sched = get_cosine_schedule_with_warmup(opt, config.WARMUP_STEPS, total_steps)
 
     step = 0
+    best_eval = float("inf"); best_epoch = -1
+
+    def eval_heldout():
+        """Mean CE loss on the held-out eval set — the number that matters."""
+        student.eval()
+        rows = [__import__("json").loads(l) for l in open(config.EVAL_DATA_PATH)]
+        tot, n = 0.0, 0
+        with torch.no_grad():
+            for r in rows:
+                ctx = r.get("context", "")
+                u = (f"{r['request']}\n\nRetrieved context:\n{ctx}" if ctx else r["request"])
+                ptxt = tok.apply_chat_template([{"role": "user", "content": u}],
+                                               add_generation_prompt=True, tokenize=False)
+                p = tok(ptxt, add_special_tokens=False, return_tensors="pt")["input_ids"][0]
+                a = tok(r["answer"], add_special_tokens=False,
+                        return_tensors="pt")["input_ids"][0]
+                ids = torch.cat([p, a])[:config.MAX_SEQ_LEN].unsqueeze(0).to(dev)
+                lab = ids.clone(); lab[0, :len(p)] = -100
+                tot += student(ids, labels=lab).loss.item(); n += 1
+        student.train()
+        return tot / max(n, 1)
+
     for epoch in range(config.NUM_EPOCHS):
         for bi, (input_ids, labels, attn) in enumerate(dl):
             input_ids, labels, attn = input_ids.to(dev), labels.to(dev), attn.to(dev)
@@ -175,13 +197,19 @@ def main():
                 if step % 5 == 0:
                     print(f"e{epoch} step{step} | loss {loss.item():.3f} "
                           f"(ce {ce.item():.3f} kl {kl.item():.3f} hid {hid.item():.3f})")
-                if step % config.SAVE_EVERY == 0:
-                    student.save_pretrained(f"{config.CHECKPOINT_DIR}/step{step}")
-                    tok.save_pretrained(f"{config.CHECKPOINT_DIR}/step{step}")
 
-    student.save_pretrained(config.STUDENT_OUT)
-    tok.save_pretrained(config.STUDENT_OUT)
-    print(f"[distill] done -> {config.STUDENT_OUT}")
+        # --- end of epoch: eval on held-out set, save this epoch's checkpoint ---
+        ev = eval_heldout()
+        ckpt = f"{config.CHECKPOINT_DIR}/epoch{epoch}"
+        student.save_pretrained(ckpt); tok.save_pretrained(ckpt)
+        flag = ""
+        if ev < best_eval:
+            best_eval, best_epoch = ev, epoch
+            student.save_pretrained(config.STUDENT_OUT); tok.save_pretrained(config.STUDENT_OUT)
+            flag = "  <-- new best, saved to outputs"
+        print(f"[eval] epoch {epoch}: held-out loss {ev:.4f}{flag}")
+
+    print(f"[distill] done. best epoch {best_epoch} @ {best_eval:.4f} -> {config.STUDENT_OUT}")
 
 
 if __name__ == "__main__":
