@@ -145,10 +145,15 @@ def main():
                 labels[:, 1:].reshape(-1), ignore_index=-100)
 
             # 2) KL between softened logits (only where we have real labels)
+            # teacher and student can have slightly different vocab sizes
+            # (32B has a few extra special tokens) — align to the shared minimum.
             T = config.KL_TEMPERATURE
             mask = (labels[:, 1:] != -100)
-            s_logp = F.log_softmax(s_out.logits[:, :-1] / T, dim=-1)
-            t_p    = F.softmax(t_out.logits[:, :-1] / T, dim=-1)
+            V = min(s_out.logits.size(-1), t_out.logits.size(-1))
+            s_logits = s_out.logits[:, :-1, :V]
+            t_logits = t_out.logits[:, :-1, :V]
+            s_logp = F.log_softmax(s_logits / T, dim=-1)
+            t_p    = F.softmax(t_logits / T, dim=-1)
             kl = (F.kl_div(s_logp, t_p, reduction="none").sum(-1) * mask)
             kl = kl.sum() / mask.sum().clamp(min=1) * (T * T)
 
