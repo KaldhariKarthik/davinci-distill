@@ -74,12 +74,14 @@ def main():
         for i, (request, source, skill) in enumerate(examples):
             prompt = build_gen_prompt(request, source)
             msgs = [{"role": "user", "content": prompt}]
-            inputs = tok.apply_chat_template(msgs, add_generation_prompt=True,
-                                             return_tensors="pt").to(model.device)
+            text_in = tok.apply_chat_template(msgs, add_generation_prompt=True,
+                                              tokenize=False)
+            inputs = tok(text_in, return_tensors="pt").to(model.device)
             with torch.no_grad():
-                out = model.generate(inputs, max_new_tokens=config.GEN_MAX_NEW_TOKENS,
+                out = model.generate(**inputs, max_new_tokens=config.GEN_MAX_NEW_TOKENS,
                                      temperature=config.GEN_TEMPERATURE, do_sample=True)
-            text = tok.decode(out[0][inputs.shape[1]:], skip_special_tokens=True).strip()
+            text = tok.decode(out[0][inputs["input_ids"].shape[1]:],
+                              skip_special_tokens=True).strip()
 
             # parse the teacher's JSON; skip malformed ones rather than crash
             try:
