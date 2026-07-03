@@ -32,14 +32,14 @@ HIDDEN_MATCH_LAYERS = "even"  # 'even' = spread matches across depth
 
 # ---- training ----------------------------------------------------------------
 LEARNING_RATE = 1e-5
-NUM_EPOCHS    = 3
+NUM_EPOCHS    = 2
 WARMUP_STEPS  = 20
 SAVE_EVERY    = 100           # checkpoint frequency (steps)
 
 # ---- data --------------------------------------------------------------------
 GENERATED_DATA_PATH = "data/teacher_data.jsonl"   # written by generate_data.py
 EVAL_DATA_PATH      = "data/eval.jsonl"           # held-out, for scoring
-VARIATIONS_PER_SEED = 60      # how many variations to expand each seed into
+VARIATIONS_PER_SEED = 30    # how many variations to expand each seed into
 
 # ---- paths -------------------------------------------------------------------
 STUDENT_OUT   = "outputs/student_distilled"
